@@ -1,0 +1,58 @@
+[
+  {
+    "objectID": "posts/redis-e-docker/index.html",
+    "href": "posts/redis-e-docker/index.html",
+    "title": "Redis e Docker",
+    "section": "",
+    "text": "Project cover"
+  },
+  {
+    "objectID": "posts/redis-e-docker/index.html#configurando-a-senha",
+    "href": "posts/redis-e-docker/index.html#configurando-a-senha",
+    "title": "Blog",
+    "section": "Configurando a senha",
+    "text": "Configurando a senha\nAltere a linha do arquivo conf que contém:\nrequirepass somePassword"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "A vida de um aspirante a engenheiro DevOps",
+    "section": "",
+    "text": "Redis e Docker\n\n\nDetalhes da implementação de um servidor Redis com Docker.\n\n\n\n\nredis\n\n\ntutorial\n\n\ndocker\n\n\ngo\n\n\n\n\nCriando um servidor Redis e um exemplo de uso com Go.\n\n\n\n\n\n\n5 de mar. de 2023\n\n\nKeven da Silva\n\n\n\n\n\n\nNenhum item correspondente"
+  },
+  {
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "Sobre",
+    "section": "",
+    "text": "Olá, eu me chamo Keven e sou estudante de engenharia da computação. Este blog será usado para documentar tecnologias que estou estudando e projetos pessoais que estou desenvolvendo."
+  },
+  {
+    "objectID": "posts/redis-e-docker/index.html#docker-image",
+    "href": "posts/redis-e-docker/index.html#docker-image",
+    "title": "Redis e Docker",
+    "section": "Docker image",
+    "text": "Docker image\nEste tutorial utiliza a versão 7.0-alpine da imagem do Redis. Verifique mais detalhes sobre a imagem do Redis em Docker Hub."
+  },
+  {
+    "objectID": "posts/redis-e-docker/index.html#arquivo-de-configuração",
+    "href": "posts/redis-e-docker/index.html#arquivo-de-configuração",
+    "title": "Redis e Docker",
+    "section": "Arquivo de configuração",
+    "text": "Arquivo de configuração\nCrie um arquivo chamado redis.conf e copie as informações do arquivo de configuração padrão, fornecidas na documentação oficial.\nOu, caso deseje fazê-lo via linha de comando, escreva a seguinte linha no seu terminal:\ncurl \"https://raw.githubusercontent.com/redis/redis/<version>/redis.conf\" > redis.conf\nOnde <version>, na URL especificada, deve ser substituído pela versão escolhida do Redis.\n\nConfigurações\nAltere a linha do arquivo de configuração, que contém a palavra requirepass e, adicione uma senha.\nrequirepass \"anyPassword\"\nDurante os testes que realizei, ao tentar subir a instância do Redis, me era apresentado a seguinte mensagem de aviso:\nWarning: Could not create server TCP listening socket ::1:6379: bind: Address not available\nEsse erro ocorre pois o servidor Redis não tem acesso as interfaces de rede necessárias. Para solucionar esse problema, é preciso alterar a linha que contém a palavra bind, na seção de rede, do arquivo de configuração do servidor. Pesquise e reescreva a linha do seguinte modo:\nbind 0.0.0.0"
+  },
+  {
+    "objectID": "posts/redis-e-docker/index.html#criando-um-volume",
+    "href": "posts/redis-e-docker/index.html#criando-um-volume",
+    "title": "Redis e Docker",
+    "section": "Criando um Volume",
+    "text": "Criando um Volume\nPara que os dados possam persistir, será necessário o uso de um volume. Que neste caso, seja criado e gerenciado pelo próprio Docker. Nós podemos criar o volume e manipula-lo por meio da CLI do Docker.\ndocker create volume redis\nApós a criação do volume, caso a instância criada anteriormente ainda esteja em execução, finalize-a, e depois crie outra instância, mas agora montado o volume criado anteriormente.\ndocker run -it --rm --name redis --net redis -v ${PWD}:/etc/redis/ -v redis:/data/ redis:7.0-alpine redis-server /etc/redis/redis.conf\nA segunda flag -v é usada para montar o novo volume, que será usada para persistência dos dados."
+  },
+  {
+    "objectID": "posts/redis-e-docker/index.html#criando-o-container-do-client",
+    "href": "posts/redis-e-docker/index.html#criando-o-container-do-client",
+    "title": "Redis e Docker",
+    "section": "Criando o container do client",
+    "text": "Criando o container do client\nPara executar o programa client, devemos utilizar a imagem do golang. Neste caso eu utilizei a versão 1.20-alpine. Ao rodar a linha abaixo, é necessário que o diretório atual seja o diretório do código fonte do programa client.\ndocker run -ti --net redis -v ${PWD}:/client -w /client golang:1.20-alpine\nFoi utilizado a flag -w ela indica o diretório de trabalho adotado. Caso você queira verificar os arquivos disponíveis no diretório do container, rode um ls e você deverá ver os arquivos criados anteriormente.\nDentro do container, rode:\ngo install\nAssim as dependências serão instaladas. Logo em seguida, compile o client rodando:\ngo build client.go\nE, para finalizar, execute o client com: ./client.\nA saída esperada é:\nA chave keyName não existe.\nCaso você tente executar o client novamente, você deverá ver a seguinte mensagem.\nChave = keyName e valor = anyValue.\nEncerre a instância do servidor do Redis e cria uma nova. Ao executar o client novamente, você verá que o par chave-valor ainda existe."
+  }
+]

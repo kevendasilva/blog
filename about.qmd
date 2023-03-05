@@ -1,0 +1,15 @@
+---
+title: "Sobre"
+lang: pt
+about:
+  template: jolla
+  links:
+    - icon: linkedin
+      text: LinkedIn
+      href: https://linkedin.com/in/keven-da-silva-gonçalves/
+    - icon: github
+      text: GitHub
+      href: https://github.com/kevendasilva
+---
+
+Olá, eu me chamo Keven e sou estudante de engenharia da computação. Este blog será usado para documentar tecnologias que estou estudando e projetos pessoais que estou desenvolvendo.

@@ -1,0 +1,17 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "Blog"
+  navbar:
+    right:
+      - about.qmd
+      - icon: linkedin
+        href: https://linkedin.com/in/keven-da-silva-gonçalves/
+      - icon: github
+        href: https://github.com/kevendasilva
+format:
+  html:
+    theme: cosmo
+    css: styles.css

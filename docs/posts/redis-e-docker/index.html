@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt" xml:lang="pt"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.2.335">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Keven da Silva">
+<meta name="description" content="Criando um servidor Redis e um exemplo de uso com Go.">
+
+<title>Blog - Redis e Docker</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1.6em;
+  vertical-align: middle;
+}
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "Sem resultados",
+    "search-matching-documents-text": "documentos correspondentes",
+    "search-copy-link-title": "Copie o link para pesquisar",
+    "search-hide-matches-text": "Ocultar correspondências adicionais",
+    "search-more-match-text": "mais correspondências neste documento",
+    "search-more-matches-text": "mais correspondências neste documento",
+    "search-clear-button-title": "Limpar",
+    "search-detached-cancel-button-title": "Cancelar",
+    "search-submit-button-title": "Enviar"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../../styles.css">
+</head>
+
+<body class="nav-fixed fullcontent">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">Blog</span>
+    </a>
+  </div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../about.html">
+ <span class="menu-text">Sobre</span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://linkedin.com/in/keven-da-silva-gonçalves/"><i class="bi bi-linkedin" role="img">
+</i> 
+ <span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/kevendasilva"><i class="bi bi-github" role="img">
+</i> 
+ <span class="menu-text"></span></a>
+  </li>  
+</ul>
+              <div id="quarto-search" class="" title="Search"></div>
+          </div> <!-- /navcollapse -->
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<header id="title-block-header" class="quarto-title-block default page-columns page-full">
+  <div class="quarto-title-banner page-columns page-full">
+    <div class="quarto-title column-body">
+      <h1 class="title">Redis e Docker</h1>
+            <p class="subtitle lead">Detalhes da implementação de um servidor Redis com Docker.</p>
+                  <div>
+        <div class="description">
+          Criando um servidor Redis e um exemplo de uso com Go.
+        </div>
+      </div>
+                          <div class="quarto-categories">
+                <div class="quarto-category">redis</div>
+                <div class="quarto-category">tutorial</div>
+                <div class="quarto-category">docker</div>
+                <div class="quarto-category">go</div>
+              </div>
+                  </div>
+  </div>
+    
+  
+  <div class="quarto-title-meta">
+
+      <div>
+      <div class="quarto-title-meta-heading">Autor</div>
+      <div class="quarto-title-meta-contents">
+               <p>Keven da Silva </p>
+            </div>
+    </div>
+      
+      <div>
+      <div class="quarto-title-meta-heading">Publicado</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date">5 de março de 2023</p>
+      </div>
+    </div>
+    
+      
+    </div>
+    
+  
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    
+<!-- main -->
+<main class="content quarto-banner-title-block" id="quarto-document-content">
+
+
+
+
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="redis-e-docker.png" class="img-fluid figure-img" width="360"></p>
+</figure>
+</div>
+<section id="introdução" class="level1">
+<h1><strong>Introdução</strong></h1>
+<p>O Redis é sistema de armazenamento de dados e tem, dentre muitas funcionalidades, a capacidade de operar como um banco de dados NoSQL, baseado no princípio chave-valor. O acrônimo Redis vem de Remote Dictionary Server (ou servidor de dicionário remoto). O Redis é capaz de suportar diferentes tipos de dados, e uma de suas principais vantagens é a sua performance, pois todos os dados de um servidor Redis residem na memória RAM da máquina hospedeira. Além disso, quando usado como banco de dados, permite a persistência dos dados em disco.</p>
+<p>No presente tutorial, criamos um exemplo de como utilizar o Redis como banco de dados.</p>
+<section id="docker-image" class="level2">
+<h2 class="anchored" data-anchor-id="docker-image">Docker image</h2>
+<p>Este tutorial utiliza a versão <code>7.0-alpine</code> da imagem do <strong>Redis</strong>. Verifique mais detalhes sobre a imagem do Redis em <a href="https://hub.docker.com/_/redis">Docker Hub</a>.</p>
+</section>
+</section>
+<section id="criando-servidor-redis" class="level1">
+<h1><strong>Criando servidor Redis</strong></h1>
+<p>Para que uma instância do Redis seja criada, é necessário o uso de um arquivo de configuração. Exemplos de arquivos estão disponíveis na documentação oficial do Redis (<a href="https://redis.io/docs/management/config/">Documentação sobre as configurações</a>). Deve-se utilizar o arquivo de configuração de acordo com a versão da imagem escolhida.</p>
+<section id="arquivo-de-configuração" class="level2">
+<h2 class="anchored" data-anchor-id="arquivo-de-configuração">Arquivo de configuração</h2>
+<p>Crie um arquivo chamado <code>redis.conf</code> e copie as informações do arquivo de configuração padrão, fornecidas na documentação oficial.</p>
+<p>Ou, caso deseje fazê-lo via linha de comando, escreva a seguinte linha no seu terminal:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="st">"https://raw.githubusercontent.com/redis/redis/&lt;version&gt;/redis.conf"</span> <span class="op">&gt;</span> redis.conf</span></code><button title="Copiar para área de transferência" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Onde <code>&lt;version&gt;</code>, na URL especificada, deve ser substituído pela versão escolhida do Redis.</p>
+<section id="configurações" class="level3">
+<h3 class="anchored" data-anchor-id="configurações">Configurações</h3>
+<p>Altere a linha do arquivo de configuração, que contém a palavra <code>requirepass</code> e, adicione uma senha.</p>
+<pre><code>requirepass "anyPassword"</code></pre>
+<p>Durante os testes que realizei, ao tentar subir a instância do Redis, me era apresentado a seguinte mensagem de aviso:</p>
+<pre><code>Warning: Could not create server TCP listening socket ::1:6379: bind: Address not available</code></pre>
+<p>Esse erro ocorre pois o servidor Redis não tem acesso as interfaces de rede necessárias. Para solucionar esse problema, é preciso alterar a linha que contém a palavra <code>bind</code>, na seção de rede, do arquivo de configuração do servidor. Pesquise e reescreva a linha do seguinte modo:</p>
+<pre><code>bind 0.0.0.0</code></pre>
+</section>
+</section>
+</section>
+<section id="configurações-docker" class="level1">
+<h1><strong>Configurações Docker</strong></h1>
+<p>Criando uma rede, que será usada para comunicação com o servidor Redis.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> network create redis</span></code><button title="Copiar para área de transferência" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>A partir da rede criada anteriormente e do arquivo de configurações do Redis, podemos criar o container:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> run <span class="at">-it</span> <span class="at">--rm</span> <span class="at">--name</span> redis <span class="at">--net</span> redis <span class="at">-v</span> <span class="va">${PWD}</span>:/etc/redis/ redis:7.0-alpine redis-server /etc/redis/redis.conf</span></code><button title="Copiar para área de transferência" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Listando cada opção e flag usada anteriormente:</p>
+<ul>
+<li><code>-it</code>: indica que desejamos um terminal interativo;</li>
+<li><code>--rm</code>: usado para remover o container após a sua finalização;</li>
+<li><code>--name</code>: usado para atribuir um nome ao container;</li>
+<li><code>--net</code>: informa a rede a ser usada;</li>
+<li><code>-v</code>: usado para montar um volume do tipo bind, entre o diretório atual da máquina e o container.</li>
+</ul>
+<p>No final da linha temos o caminho, já no container, para o arquivo de configuração usado no servidor.</p>
+<section id="criando-um-volume" class="level2">
+<h2 class="anchored" data-anchor-id="criando-um-volume">Criando um Volume</h2>
+<p>Para que os dados possam persistir, será necessário o uso de um volume. Que neste caso, seja criado e gerenciado pelo próprio Docker. Nós podemos criar o volume e manipula-lo por meio da CLI do Docker.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> create volume redis</span></code><button title="Copiar para área de transferência" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Após a criação do volume, caso a instância criada anteriormente ainda esteja em execução, finalize-a, e depois crie outra instância, mas agora montado o volume criado anteriormente.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> run <span class="at">-it</span> <span class="at">--rm</span> <span class="at">--name</span> redis <span class="at">--net</span> redis <span class="at">-v</span> <span class="va">${PWD}</span>:/etc/redis/ <span class="at">-v</span> redis:/data/ redis:7.0-alpine redis-server /etc/redis/redis.conf</span></code><button title="Copiar para área de transferência" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>A segunda flag <code>-v</code> é usada para montar o novo volume, que será usada para persistência dos dados.</p>
+</section>
+</section>
+<section id="exemplo-em-go" class="level1">
+<h1><strong>Exemplo em Go</strong></h1>
+<p>Com o Go instalado, crie um novo módulo com:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">go</span> mod init client</span></code><button title="Copiar para área de transferência" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Um arquivo chamado <code>go.mod</code> deve ser gerado.</p>
+<p>O código a seguir é um simples exemplo de como utilizar o Redis como um banco de dados. Crie um arquivo (aqui eu chamarei o arquivo de <code>client.go</code>) e adicione o seguinte código:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode go code-with-copy"><code class="sourceCode go"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">package</span> main</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="kw">import</span> <span class="op">(</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">"context"</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">"fmt"</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">"github.com/redis/go-redis/v9"</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="op">)</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> ctx <span class="op">=</span> context<span class="op">.</span>Background<span class="op">()</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="kw">func</span> main<span class="op">()</span> <span class="op">{</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    rdb <span class="op">:=</span> redis<span class="op">.</span>NewClient<span class="op">(&amp;</span>redis<span class="op">.</span>Options<span class="op">{</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    Addr<span class="op">:</span>     <span class="st">"redis:6379"</span><span class="op">,</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>    Password<span class="op">:</span> <span class="st">"anyPassword"</span><span class="op">,</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>    DB<span class="op">:</span>       <span class="dv">0</span><span class="op">,</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>  <span class="op">})</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Consultando se a chave já existe</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>    myKey <span class="op">:=</span> <span class="st">"keyName"</span></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>    myValue<span class="op">,</span> err <span class="op">:=</span> rdb<span class="op">.</span>Get<span class="op">(</span>ctx<span class="op">,</span> myKey<span class="op">).</span>Result<span class="op">()</span></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Caso não exista</span></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> err <span class="op">==</span> redis<span class="op">.</span>Nil <span class="op">{</span></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>        <span class="co">// Cria a chave</span></span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>    fmt<span class="op">.</span>Printf<span class="op">(</span><span class="st">"A chave %s não existe.</span><span class="ch">\n</span><span class="st">"</span><span class="op">,</span> myKey<span class="op">)</span></span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>        err <span class="op">=</span> rdb<span class="op">.</span>Set<span class="op">(</span>ctx<span class="op">,</span> myKey<span class="op">,</span> <span class="st">"anyValue"</span><span class="op">,</span> <span class="dv">0</span><span class="op">).</span>Err<span class="op">()</span></span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a>            fmt<span class="op">.</span>Println<span class="op">(</span><span class="st">"Erro ao criar par chave-valor."</span><span class="op">)</span></span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Caso seja apresentado outro erro</span></span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a>  <span class="op">}</span> <span class="cf">else</span> <span class="cf">if</span> err <span class="op">!=</span> <span class="ot">nil</span> <span class="op">{</span></span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a>        <span class="bu">panic</span><span class="op">(</span>err<span class="op">)</span></span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Caso a chave tenha sido encontrada</span></span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span> <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a>        fmt<span class="op">.</span>Printf<span class="op">(</span><span class="st">"Chave = %s e valor = %s.</span><span class="ch">\n</span><span class="st">"</span><span class="op">,</span> myKey<span class="op">,</span> myValue<span class="op">)</span></span>
+<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copiar para área de transferência" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Para lidar com as dependências, rode:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">go</span> get</span></code><button title="Copiar para área de transferência" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>O Go deve gerar um arquivo chamado <code>go.sum</code>, que é um arquivo que guarda informações da dependências.</p>
+<section id="criando-o-container-do-client" class="level2">
+<h2 class="anchored" data-anchor-id="criando-o-container-do-client">Criando o container do client</h2>
+<p>Para executar o programa client, devemos utilizar a imagem do <strong>golang.</strong> Neste caso eu utilizei a versão <code>1.20-alpine</code>. Ao rodar a linha abaixo, é necessário que o diretório atual seja o diretório do código fonte do programa client.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> run <span class="at">-ti</span> <span class="at">--net</span> redis <span class="at">-v</span> <span class="va">${PWD}</span>:/client <span class="at">-w</span> /client golang:1.20-alpine</span></code><button title="Copiar para área de transferência" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Foi utilizado a flag <code>-w</code> ela indica o diretório de trabalho adotado. Caso você queira verificar os arquivos disponíveis no diretório do container, rode um <code>ls</code> e você deverá ver os arquivos criados anteriormente.</p>
+<p>Dentro do container, rode:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">go</span> install</span></code><button title="Copiar para área de transferência" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Assim as dependências serão instaladas. Logo em seguida, compile o client rodando:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">go</span> build client.go</span></code><button title="Copiar para área de transferência" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>E, para finalizar, execute o client com: <code>./client</code>.</p>
+<p>A saída esperada é:</p>
+<pre><code>A chave keyName não existe.</code></pre>
+<p>Caso você tente executar o client novamente, você deverá ver a seguinte mensagem.</p>
+<pre><code>Chave = keyName e valor = anyValue.</code></pre>
+<p>Encerre a instância do servidor do Redis e cria uma nova. Ao executar o client novamente, você verá que o par chave-valor ainda existe.</p>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    target: function(trigger) {
+      return trigger.previousElementSibling;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copiado!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copiado!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
