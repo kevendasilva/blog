@@ -85,7 +85,7 @@ No final da linha temos o caminho, já no container, para o arquivo de configura
 Para que os dados possam persistir, será necessário o uso de um volume. Que neste caso, seja criado e gerenciado pelo próprio Docker. Nós podemos criar o volume e manipula-lo por meio da CLI do Docker.
 
 ```bash
-docker create volume redis
+docker volume create redis
 ```
 
 Após a criação do volume, caso a instância criada anteriormente ainda esteja em execução, finalize-a, e depois crie outra instância, mas agora montado o volume criado anteriormente.

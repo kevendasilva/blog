@@ -46,7 +46,7 @@
     "href": "posts/redis-e-docker/index.html#criando-um-volume",
     "title": "Redis e Docker",
     "section": "Criando um Volume",
-    "text": "Criando um Volume\nPara que os dados possam persistir, será necessário o uso de um volume. Que neste caso, seja criado e gerenciado pelo próprio Docker. Nós podemos criar o volume e manipula-lo por meio da CLI do Docker.\ndocker create volume redis\nApós a criação do volume, caso a instância criada anteriormente ainda esteja em execução, finalize-a, e depois crie outra instância, mas agora montado o volume criado anteriormente.\ndocker run -it --rm --name redis --net redis -v ${PWD}:/etc/redis/ -v redis:/data/ redis:7.0-alpine redis-server /etc/redis/redis.conf\nA segunda flag -v é usada para montar o novo volume, que será usada para persistência dos dados."
+    "text": "Criando um Volume\nPara que os dados possam persistir, será necessário o uso de um volume. Que neste caso, seja criado e gerenciado pelo próprio Docker. Nós podemos criar o volume e manipula-lo por meio da CLI do Docker.\ndocker volume create redis\nApós a criação do volume, caso a instância criada anteriormente ainda esteja em execução, finalize-a, e depois crie outra instância, mas agora montado o volume criado anteriormente.\ndocker run -it --rm --name redis --net redis -v ${PWD}:/etc/redis/ -v redis:/data/ redis:7.0-alpine redis-server /etc/redis/redis.conf\nA segunda flag -v é usada para montar o novo volume, que será usada para persistência dos dados."
   },
   {
     "objectID": "posts/redis-e-docker/index.html#criando-o-container-do-client",
