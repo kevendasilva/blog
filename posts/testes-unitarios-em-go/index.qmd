@@ -1,0 +1,471 @@
+---
+title: "Testes Unitários em Go"
+lang: pt
+author: "Keven da Silva"
+description: "Criando testes unitários em Go, com base em duas abordagens."
+date: "2023-03-12"
+toc: true
+categories: ["testes", "tutorial", "go"]
+---
+
+![](testes-unitarios-em-go.png){width=360 fig-align="center"}
+
+# Introdução
+
+É comum que bugs apareçam durante o desenvolvimento de software, devido a erros de sintaxe ou de lógica de programação. A aplicação de testes durante o desenvolvimento tem como principal objetivo mitigar os bugs presentes no software. Além disso, quando bem escritos, os testes facilitam a alteração e implementação de novas funcionalidades em um software.
+
+Nesse tutorial serão apresentadas duas abordagens de escrita de testes unitários, na linguagem Go. As abordagens são: Given-When-Then e Table Driven.
+
+# Como escrever um teste unitário em Go
+
+Um teste unitário visa avaliar se uma pequena porção de código (neste caso, uma função), produz o resultado esperado para uma dada entrada. Em Go, um teste unitário pode ser escrito da seguinte forma:
+
+```go
+package packagename
+
+import (
+    "testing"
+)
+
+func TestSomething(t *testing.T) {
+    // ...
+}
+```
+
+Neste caso, o pacote que será testado se chama `packagename`. O Go fornece um pacote para realização de testes chamado **testing**. O pacote fornece diferentes recursos, como verificação da cobertura dos testes e benchmark.
+
+Por padrão, os nomes das funções de testes devem começar com a palavra *Test e* seguidos de uma frase relacionada com o teste que será realizado. Além disso, as funções de testes devem receber um único parâmetro, que neste caso é:
+
+```go
+t *testing.T
+```
+
+onde `t` é um ponteiro, para uma variável do tipo `T`,  implementado pelo pacote **testing**. O tipo `T` é responsável por manipular o estado do teste e apresentar mensagens de log.
+
+Por fim, o nome do arquivo de teste segue o padrão `packagename_test.go`, onde o sufixo **\_test.go** deve ser usado em todos os arquivos de testes.
+
+::: {.callout-note}
+Em Go, os arquivos de testes devem estar localizados no mesmo diretório do pacote testado. Isso garante que o arquivo de teste tenha acesso direto aos dados do pacote testado.
+:::
+
+::: {.callout-note}
+Os arquivos de teste não são compilados com os demais arquivos do pacote.
+:::
+
+# Arquivos do tutorial
+
+Para ambas abordagens, o presente tutorial fará uso dos seguintes arquivos:
+
+- **go.mod**: arquivo criado para gerenciar o módulo;
+- **main.go**: arquivo de utilização do pacote `users`;
+- pacote **users**:
+  - users.go: implementação da função testada.
+  - users_test.go: implementação dos testes da função implementada no arquivo acima.
+
+## go.mod
+
+Para iniciar o módulo, rode o seguinte comando:
+
+```bash
+go mod init writing-tests
+```
+
+E o arquivo `go.mod` será gerado.
+
+## main.go
+
+Esse é o arquivo que fará uso da função a ser testada. O programa principal fará as simples tarefas de criar um usuário e apresentá-lo no terminal.
+
+O código é o seguinte:
+
+```go
+package main
+
+import (
+	"fmt"
+	"writing-tests/users"
+)
+
+func main() {
+  user, err := users.Create(users.Params{Email: "user@user"})
+  if err != nil {
+    panic(nil)
+  }
+
+  fmt.Printf("%+v\n",user)
+}
+```
+
+## pacote **users**
+
+O repositório **users** deve conter todos os arquivos do pacote.
+
+### users.go
+
+Esse será o arquivo que implementará a função a ser testada, além de fornecer alguns dados úteis para os testes.
+
+Como o Go não suporta parâmetros opcionais nas assinaturas de funções, precisamos de uma alternativa para contornar tal limitação. Uma das soluções para tal limitação, é definir um tipo personalizado para atender as especificações da função.
+
+Para contornar tal problema, eu criei um tipo chamado `Params`, que será usado como parâmetro da função `Create`.
+
+O resultado da implementação foi o seguinte:
+
+```go
+package users
+
+import (
+	"errors"
+	"fmt"
+)
+
+var defaultPictureUrl = "https://domain/assets/default_picture.jpg"
+var idController = 0
+
+type User struct {
+    Id      int
+    Name    string
+    Email   string
+    Profile string
+}
+
+type Params struct {
+    Name 	   string
+	Email      string
+	PictureUrl string
+}
+
+func Create(params Params) (User, error) {
+    // Campo obrigatório
+	if params.Email == "" {
+		return User{}, errors.New("email is required to create user")
+	}
+
+    userId := getId()
+
+    // Definindo um nome genérico
+	if params.Name == "" {
+		params.Name = fmt.Sprintf("User%d", userId)
+	}
+
+    // Definindo a imagem padrão
+	if params.PictureUrl == "" {
+		params.PictureUrl = defaultPictureUrl
+	}
+
+    // A string formata usada no campo profile
+    profile := func () string {
+        layout := "Name: %s, E-mail: %s, User picture: %s."
+        return fmt.Sprintf(layout, params.Name, params.Email, params.PictureUrl)
+    }
+
+    user := User {
+        Id: userId,
+        Name: params.Name,
+        Email: params.Email,
+        Profile: profile(),
+    }
+
+	return user, nil
+}
+
+func getId() int {
+    idController++
+    return idController
+}
+```
+
+A função deverá apresentar o seguinte comportamento:
+
+- Caso não seja fornecido um e-mail, independente dos valores dados nos demais campos, um erro é criado e retornado juntamente com uma variável do tipo `User`, onde cada campo está com o **zero value** do tipo usado;
+- Caso o nome do usuário não seja fornecido, um nome padrão será atribuído. Este nome é composto pela palavra “User” seguido do ID do usuário;
+- Caso não seja fornecida uma URL da foto do usuário, a URL da foto padrão será atribuída;
+- O campo `Profile` armazena uma string formatada, que é uma combinação das demais informações.
+
+:::{.callout-note}
+Foi usada uma função anônima para facilitar a escrita da variável `user`. Como a função tem o contexto, não há necessidade da passagem de parâmetros para criação da string.
+:::
+
+Por fim, uma variável do tipo `User` é retornada, juntamente com o valor **nil**, indicando que não foi apresentado nenhum erro, durante a criação do usuário.
+
+Tabela com as informações do **zero value** de cada tipo de dado.
+
+| Tipo | Zero Value |
+| --- | --- |
+| int,  int8,  int16,  int32,  int64 | 0 |
+| uint,  uint8,  uint16,  uint32,  uint64  | 0 |
+| byte, rune | 0 |
+| float32, float64 | 0.0 |
+| string | "" |
+| bool  | false |
+| chan, interface, map, func | nil  |
+| pointer, slice, array | nil |
+
+### users_test.go
+
+Por fim, teremos o arquivo onde os testes serão implementados. O conteúdo do arquivo será o seguinte:
+
+```go
+package users
+
+import (
+	"fmt"
+	"testing"
+)
+
+func TestCreateUser(t *testing.T) {
+	// ...
+}
+```
+
+O corpo da função de teste `TestCreateUser` será preenchido de acordo com abordagem escolhida.
+
+# Given-When-Then
+
+Cada palavra que compõe o nome desta abordagem possui um significado, no contexto de testes. O significado de cada uma das palavras é o seguinte:
+
+- Given: para uma dada entrada;
+- When: chama o método analisado;
+- Then: realiza comparações.
+
+Exemplo da abordagem Given-When-Then:
+
+```go
+func TestCreateUser(t *testing.T) {
+	// Given
+	userParams := Params {
+		Name: "Johnny",
+	}
+
+	expected := User {}
+
+	// When
+	result, _ := Create(userParams)
+
+  // Then
+	if expected != result {
+	  t.Errorf("FAILED -> expected: \"%+v\", result: \"%+v\".", expected, result)
+	} else {
+	  t.Logf("SUCCEDED -> expected: \"%+v\", result: \"%+v\".", expected, result)
+	}
+}
+```
+
+::: {.callout-note}
+`t.Errorf`: Apresentar informações de falha.<br>
+`t.Logf`: Apresentar informação de não-falha.
+:::
+
+::: {.callout-tip}
+Foi utilizado o símbolo de `blank identifier` "_" (underline) para indicar que o segundo valor retornado não será usado.
+:::
+
+Esta abordagem funciona da seguinte maneira:
+
+1. Para uma dada entrada (userParams);
+2. Quando aplicada na função analisada, retorna um resultado (result);
+3. E, por fim, é verificado se o resultado dado pela função (result) é igual ao resultado esperado (expected).
+
+O uso dessa abordagem não é muito indicado quando o teste realizado é simples. A função de teste criada acima, verifica apenas um dos possíveis casos de parâmetros fornecidos para a função analisada.
+
+Quando existe a necessidade de criar mais de uma entrada (múltiplos casos de teste), para testes simples, a abordagem recomendada é a Table Driven. Criar uma função, como a apresentada acima, para cada caso de teste, acaba dificultando a manutenibilidade e compreensão dos testes.
+
+# Table Driven
+
+Como dito anteriormente, essa abordagem favorece a criação de múltiplos casos de teste, pois o teste a ser a realizado, é simples. Além da limitação, em relação a complexidade do teste, essa abordagem necessita de uma estrutura de dados para armazenar os casos de teste.
+
+Algumas soluções empregam o uso de um slice, mas o mais recomendado é fazer uso de um `map` para armazenar as informações dos casos de teste.
+
+Os casos de testes poderiam ser escritos da seguinte forma:
+
+```go
+// Exemplo inicial de estrutura de dados usado para criar as entradas dos testes
+testsCases := map[string]struct {
+	name       string
+	email      string
+	pictureUrl string
+    expected   User
+} {
+  // Casos de teste
+}
+```
+
+Mas o tipo `Params`, definido no pacote, pode ser usada para essa finalidade. Podemos utilizar o tipo apenas usando o seu nome. Como o arquivo de teste e de implementação estão no mesmo pacote, o arquivo de teste tem acesso a todas os dados do pacote.
+
+Após o uso do tipo `Params`, o resultado deve ser o seguinte:
+
+```go
+// Após a modificação
+testsCases := map[string]struct {
+  userParams Params
+  expected   User
+} {
+  // Casos de teste
+}
+```
+
+::: {.callout-warning}
+Como ao iterar sobre uma variável do tipo `map` a ordem não é garantida, os valores dos IDs dos usuários podem ser diferentes toda vez que os testes forem rodados. Para contornar tal problema foi necessário o uso de um slice, para armazenar os casos de teste.
+:::
+
+Com base nessa abordagem, o teste ficaria da seguinte forma:
+
+```go
+package users
+
+import (
+	"fmt"
+	"testing"
+)
+
+func TestCreateUser(t *testing.T) {
+    layoutProfile := "Name: %s, E-mail: %s, User picture: %s."
+
+    testCases := []struct {
+		name     string
+        params   Params
+		expected User
+	} {
+    {
+        name: "given the name but not the email and picture",
+        params: Params {
+            Name: "Johnny",
+        },
+        expected: User {},
+    },
+    {
+        name: "given the name and picture but not the email",
+        params: Params {
+            Name: "Mike",
+            PictureUrl: "https://domain/assets/picture.png",
+        },
+        expected: User {},
+    },
+    {
+        name: "given the name and email but not the picture",
+        params: Params {
+            Name: "Joseph",
+            Email: "joseph@domain",
+        },
+        expected: User {
+            Id: 1,
+            Name: "Joseph",
+            Email: "joseph@domain",
+            Profile: fmt.Sprintf(layoutProfile, "Joseph", "joseph@domain", defaultPictureUrl),
+        },
+    },
+    {
+        name: "given the email and picture but not the name",
+        params: Params {
+            Email: "olaf@anotherdomain",
+            PictureUrl: "https://anotherdomain/assets/picture.jpg",
+        },
+        expected: User {
+            Id: 2,
+            Name: "User2",
+            Email: "olaf@anotherdomain",
+            Profile: fmt.Sprintf(layoutProfile, "User2", "olaf@anotherdomain", "https://anotherdomain/assets/picture.jpg"),
+        },
+    },
+    {
+        name: "given the email, picture and name",
+        params: Params {
+            Name: "Paul",
+            Email: "paul@anotherdomain",
+            PictureUrl: "https://anotherdomain/assets/profile.png",
+        },
+        expected: User {
+            Id: 3,
+            Name: "Paul",
+            Email: "paul@anotherdomain",
+            Profile: fmt.Sprintf(layoutProfile, "Paul", "paul@anotherdomain", "https://anotherdomain/assets/profile.png"),
+        },
+    },
+	}
+
+	// Rodando cada caso de teste
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			result, _ := Create(test.params)
+
+			if result != test.expected {
+			    t.Errorf("FAILED -> expected: \"%+v\", result: \"%+v\".", test.expected, result)
+			} else {
+			    t.Logf("SUCCEDED -> expected: \"%+v\", result: \"%+v\".", test.expected, result)
+			}
+		})
+	}
+}
+```
+
+# Executando testes
+
+Para executar os testes, você deve estar localizado no diretório onde os arquivos de testes se encontram. Dado que você está na localização correta, rode o seguinte comando:
+
+```bash
+go test
+```
+
+A saída esperada deve ser algo do tipo:
+
+```
+PASS
+ok  	writing-tests/users	0.002s
+```
+
+## Executando um teste específico
+
+Você pode executar um teste específico usando a flag `-run` seguido do nome da função de teste. Exemplo:
+
+```bash
+go test -run=TestName
+```
+
+Caso você deseje ver as mensagens apresentadas pelos testes, adicione a flag `-v`. Além da possibilidade de executar uma função de teste específica, podemos executar uma função de teste específica e um caso de teste específico. Veja um exemplo:
+
+```bash
+go test -run="TestName/nome do caso de teste" -v
+```
+
+::: {.callout-warning}
+No caso da função `TestCreateUser` não será possível executar apenas um caso de teste específico, pois o tipo `User`possui um campo **Id**, que será diferente dado o contexto geral.
+:::
+
+# Cobertura dos testes
+
+Para visualizar a cobertura dos testes, podemos utilizar a flag `-cover`. Veja o exemplo:
+
+```bash
+go test -cover
+> saída:
+PASS
+	writing-tests/users	coverage: 100.0% of statements
+ok  	writing-tests/users	0.003s
+```
+
+Caso você queira criar um arquivo com informações sobre a cobertura, é possível usando a flag `-coverprofile`.
+
+```bash
+go test -coverprofile=cover_out
+> arquivo:
+mode: set
+writing-tests/users/users.go:24.42,26.24 1 1
+writing-tests/users/users.go:26.24,28.3 1 1
+writing-tests/users/users.go:30.3,33.23 2 1
+writing-tests/users/users.go:33.23,35.3 1 1
+writing-tests/users/users.go:38.2,38.29 1 1
+writing-tests/users/users.go:38.29,40.3 1 1
+writing-tests/users/users.go:43.3,43.29 1 1
+writing-tests/users/users.go:43.29,46.4 2 1
+writing-tests/users/users.go:49.3,56.18 2 1
+writing-tests/users/users.go:59.18,62.2 2 1
+```
+
+Caso você deseje visualizar no formato HTML:
+
+```bash
+go tool cover -html=cover_out -o cover_out.html
+```
+
+E, a saída será uma página HTML contendo informações sobre a cobertura dos testes e quais partes do código foram testadas.
+
+See you space cowboy...

@@ -18,7 +18,7 @@
     "href": "index.html",
     "title": "A vida de um aspirante a engenheiro DevOps",
     "section": "",
-    "text": "Redis e Docker\n\n\nDetalhes da implementação de um servidor Redis com Docker.\n\n\n\n\nredis\n\n\ntutorial\n\n\ndocker\n\n\ngo\n\n\n\n\nCriando um servidor Redis e um exemplo de uso com Go.\n\n\n\n\n\n\n5 de mar. de 2023\n\n\nKeven da Silva\n\n\n\n\n\n\nNenhum item correspondente"
+    "text": "Testes Unitários em Go\n\n\n\n\n\n\n\ntestes\n\n\ntutorial\n\n\ngo\n\n\n\n\nCriando testes unitários em Go, com base em duas abordagens.\n\n\n\n\n\n\n12 de mar. de 2023\n\n\nKeven da Silva\n\n\n\n\n\n\n  \n\n\n\n\nRedis e Docker\n\n\nDetalhes da implementação de um servidor Redis com Docker.\n\n\n\n\nredis\n\n\ntutorial\n\n\ndocker\n\n\ngo\n\n\n\n\nCriando um servidor Redis e um exemplo de uso com Go.\n\n\n\n\n\n\n5 de mar. de 2023\n\n\nKeven da Silva\n\n\n\n\n\n\nNenhum item correspondente"
   },
   {
     "objectID": "about.html",
@@ -54,5 +54,61 @@
     "title": "Redis e Docker",
     "section": "Criando o container do client",
     "text": "Criando o container do client\nPara executar o programa client, devemos utilizar a imagem do golang. Neste caso eu utilizei a versão 1.20-alpine. Ao rodar a linha abaixo, é necessário que o diretório atual seja o diretório do código fonte do programa client.\ndocker run -ti --net redis -v ${PWD}:/client -w /client golang:1.20-alpine\nFoi utilizado a flag -w ela indica o diretório de trabalho adotado. Caso você queira verificar os arquivos disponíveis no diretório do container, rode um ls e você deverá ver os arquivos criados anteriormente.\nDentro do container, rode:\ngo install\nAssim as dependências serão instaladas. Logo em seguida, compile o client rodando:\ngo build client.go\nE, para finalizar, execute o client com: ./client.\nA saída esperada é:\nA chave keyName não existe.\nCaso você tente executar o client novamente, você deverá ver a seguinte mensagem.\nChave = keyName e valor = anyValue.\nEncerre a instância do servidor do Redis e cria uma nova. Ao executar o client novamente, você verá que o par chave-valor ainda existe."
+  },
+  {
+    "objectID": "posts/testes-unitarios-em-go/index.html#go.mod",
+    "href": "posts/testes-unitarios-em-go/index.html#go.mod",
+    "title": "Testes Unitários em Go",
+    "section": "go.mod",
+    "text": "go.mod\nPara iniciar o módulo, rode o seguinte comando:\ngo mod init writing-tests\nE o arquivo go.mod será gerado."
+  },
+  {
+    "objectID": "posts/testes-unitarios-em-go/index.html#main.go",
+    "href": "posts/testes-unitarios-em-go/index.html#main.go",
+    "title": "Testes Unitários em Go",
+    "section": "main.go",
+    "text": "main.go\nEsse é o arquivo que fará uso da função a ser testada. O programa principal fará as simples tarefas de criar um usuário e apresentá-lo no terminal.\nO código é o seguinte:\npackage main\n\nimport (\n    \"fmt\"\n    \"writing-tests/users\"\n)\n\nfunc main() {\n  user, err := users.Create(users.Params{Email: \"user@user\"})\n  if err != nil {\n    panic(nil)\n  }\n\n  fmt.Printf(\"%+v\\n\",user)\n}"
+  },
+  {
+    "objectID": "posts/testes-unitarios-em-go/index.html#pacote-users",
+    "href": "posts/testes-unitarios-em-go/index.html#pacote-users",
+    "title": "Testes Unitários em Go",
+    "section": "pacote users",
+    "text": "pacote users\nO repositório users deve conter todos os arquivos do pacote.\n\nusers.go\nEsse será o arquivo que implementará a função a ser testada, além de fornecer alguns dados úteis para os testes.\nComo o Go não suporta parâmetros opcionais nas assinaturas de funções, precisamos de uma alternativa para contornar tal limitação. Uma das soluções para tal limitação, é definir um tipo personalizado para atender as especificações da função.\nPara contornar tal problema, eu criei um tipo chamado Params, que será usado como parâmetro da função Create.\nO resultado da implementação foi o seguinte:\npackage users\n\nimport (\n    \"errors\"\n    \"fmt\"\n)\n\nvar defaultPictureUrl = \"https://domain/assets/default_picture.jpg\"\nvar idController = 0\n\ntype User struct {\n    Id      int\n    Name    string\n    Email   string\n    Profile string\n}\n\ntype Params struct {\n    Name       string\n    Email      string\n    PictureUrl string\n}\n\nfunc Create(params Params) (User, error) {\n    // Campo obrigatório\n    if params.Email == \"\" {\n        return User{}, errors.New(\"email is required to create user\")\n    }\n\n    userId := getId()\n\n    // Definindo um nome genérico\n    if params.Name == \"\" {\n        params.Name = fmt.Sprintf(\"User%d\", userId)\n    }\n\n    // Definindo a imagem padrão\n    if params.PictureUrl == \"\" {\n        params.PictureUrl = defaultPictureUrl\n    }\n\n    // A string formata usada no campo profile\n    profile := func () string {\n        layout := \"Name: %s, E-mail: %s, User picture: %s.\"\n        return fmt.Sprintf(layout, params.Name, params.Email, params.PictureUrl)\n    }\n\n    user := User {\n        Id: userId,\n        Name: params.Name,\n        Email: params.Email,\n        Profile: profile(),\n    }\n\n    return user, nil\n}\n\nfunc getId() int {\n    idController++\n    return idController\n}\nA função deverá apresentar o seguinte comportamento:\n\nCaso não seja fornecido um e-mail, independente dos valores dados nos demais campos, um erro é criado e retornado juntamente com uma variável do tipo User, onde cada campo está com o zero value do tipo usado;\nCaso o nome do usuário não seja fornecido, um nome padrão será atribuído. Este nome é composto pela palavra “User” seguido do ID do usuário;\nCaso não seja fornecida uma URL da foto do usuário, a URL da foto padrão será atribuída;\nO campo Profile armazena uma string formatada, que é uma combinação das demais informações.\n\n\n\n\n\n\n\nObservação\n\n\n\nFoi usada uma função anônima para facilitar a escrita da variável user. Como a função tem o contexto, não há necessidade da passagem de parâmetros para criação da string.\n\n\nPor fim, uma variável do tipo User é retornada, juntamente com o valor nil, indicando que não foi apresentado nenhum erro, durante a criação do usuário.\nTabela com as informações do zero value de cada tipo de dado.\n\n\n\nTipo\nZero Value\n\n\n\n\nint, int8, int16, int32, int64\n0\n\n\nuint, uint8, uint16, uint32, uint64\n0\n\n\nbyte, rune\n0\n\n\nfloat32, float64\n0.0\n\n\nstring\n“”\n\n\nbool\nfalse\n\n\nchan, interface, map, func\nnil\n\n\npointer, slice, array\nnil\n\n\n\n\n\nusers_test.go\nPor fim, teremos o arquivo onde os testes serão implementados. O conteúdo do arquivo será o seguinte:\npackage users\n\nimport (\n    \"fmt\"\n    \"testing\"\n)\n\nfunc TestCreateUser(t *testing.T) {\n    // ...\n}\nO corpo da função de teste TestCreateUser será preenchido de acordo com abordagem escolhida."
+  },
+  {
+    "objectID": "posts/testes-unitarios-em-go/index.html#executando-um-teste-específico",
+    "href": "posts/testes-unitarios-em-go/index.html#executando-um-teste-específico",
+    "title": "Testes Unitários em Go",
+    "section": "Executando um teste específico",
+    "text": "Executando um teste específico\nVocê pode executar um teste específico usando a flag -run seguido do nome da função de teste. Exemplo:\ngo test -run=TestName\nCaso você deseje ver as mensagens apresentadas pelos testes, adicione a flag -v. Além da possibilidade de executar uma função de teste específica, podemos executar uma função de teste específica e um caso de teste específico. Veja um exemplo:\ngo test -run=\"TestName/nome do caso de teste\" -v\n\n\n\n\n\n\nAviso\n\n\n\nNo caso da função TestCreateUser não será possível executar apenas um caso de teste específico, pois o tipo Userpossui um campo Id, que será diferente dado o contexto geral."
+  },
+  {
+    "objectID": "posts/testes-unitarios-em-go/index.html#go.mod-1",
+    "href": "posts/testes-unitarios-em-go/index.html#go.mod-1",
+    "title": "Testes Unitários em Go",
+    "section": "go.mod",
+    "text": "go.mod\nPara iniciar o módulo, rode o seguinte comando:\ngo mod init writing-tests\nE o arquivo go.mod será gerado."
+  },
+  {
+    "objectID": "posts/testes-unitarios-em-go/index.html#main.go-1",
+    "href": "posts/testes-unitarios-em-go/index.html#main.go-1",
+    "title": "Testes Unitários em Go",
+    "section": "main.go",
+    "text": "main.go\nEsse é o arquivo que fará uso da função a ser testada. O programa principal fará as simples tarefas de criar um usuário e apresentá-lo no terminal.\nO código é o seguinte:\npackage main\n\nimport (\n    \"fmt\"\n    \"writing-tests/users\"\n)\n\nfunc main() {\n  user, err := users.Create(users.Params{Email: \"user@user\"})\n  if err != nil {\n    panic(nil)\n  }\n\n  fmt.Printf(\"%+v\\n\",user)\n}"
+  },
+  {
+    "objectID": "posts/testes-unitarios-em-go/index.html#pacote-users-1",
+    "href": "posts/testes-unitarios-em-go/index.html#pacote-users-1",
+    "title": "Testes Unitários em Go",
+    "section": "pacote users",
+    "text": "pacote users\nO repositório ************users************ deve conter todos os arquivos do pacote.\n\nusers.go\nEsse será o arquivo que implementará a função a ser testada, além de fornecer alguns dados úteis para os testes.\nComo o Go não suporta parâmetros opcionais nas assinaturas de funções, precisamos de uma alternativa para contornar tal limitação. Uma das soluções para tal limitação, é definir um tipo personalizado para atender as especificações da função.\nPara contornar tal problema, eu criei um tipo chamado Params, que será usado como parâmetro da função testada.\nO resultado da implementação foi o seguinte:\npackage users\n\nimport (\n    \"errors\"\n    \"fmt\"\n)\n\nvar DefaultPictureUrl = \"https://domain/assets/default_picture.jpg\"\nvar IdController = 0\n\ntype User struct {\n    Id      int\n    Name    string\n    Email   string\n  Profile string\n}\n\ntype Params struct {\n  Name       string\n    Email      string\n    PictureUrl string\n}\n\nfunc Create(params Params) (User, error) {\n  // Campo obrigatório\n    if params.Email == \"\" {\n        return User{}, errors.New(\"email is required to create user\")\n    }\n\n  userId := getId()\n\n  // Definindo um nome genérico\n    if params.Name == \"\" {\n        params.Name = fmt.Sprintf(\"User%d\", userId)\n    }\n\n  // Definindo a imagem padrão\n    if params.PictureUrl == \"\" {\n        params.PictureUrl = DefaultPictureUrl\n    }\n\n  // A string formata usada no campo profile\n  profile := func () string {\n    layout := \"Name: %s, E-mail: %s, User picture: %s.\"\n    return fmt.Sprintf(layout, params.Name, params.Email, params.PictureUrl)\n  }\n\n  user := User {\n    Id: userId,\n    Name: params.Name,\n    Email: params.Email,\n    Profile: profile(),\n  }\n\n    return user, nil\n}\n\nfunc getId() int {\n  IdController++\n  return IdController\n}\nA função deverá apresentar o seguinte comportamento:\n\nCaso não seja fornecido um e-mail, independente dos valores dados nos demais campos, um erro é criado e retornado juntamente com uma variável do tipo User, onde cada campo está com o *zero value** do tipo;\nCaso o nome do usuário não seja fornecido, um nome padrão será atribuído. Este nome é composto pela palavra “User” seguido do ID do usuário;\nCaso não seja fornecida uma URL da foto do usuário, a URL da foto padrão será atribuída;\nO campo Profile armazena uma string formatada*, que é uma combinação da demais informações.\n\nPor fim, uma variável do tipo User é retornada, juntamente com o valor **********nil**********, indicando que não foi apresentado nenhum erro, durante a criação do usuário.\n*Tabela com as informações do zero value de cada tipo de dado.\n\n\n\nTipo\nZero Value\n\n\n\n\nint, int8, int16, int32, int64\n0\n\n\nuint, uint8, uint16, uint32, uint64\n0\n\n\nbyte, rune\n0\n\n\nfloat32, float64\n0.0\n\n\nstring\n“”\n\n\nbool\nfalse\n\n\nchan, interface, map, func\nnil\n\n\npointer, slice, array\nnil\n\n\n\n*Foi usada uma função anônima para facilitar a escrita da variável `user` final. Como a função tem o contexto, não há necessidade da passagem de parâmetros para criação da string.\n\n\nusers_test.go\nPor fim, teremos o arquivo onde os testes serão implementados. O conteúdo do arquivo será o seguinte:\npackage users\n\nimport (\n    \"fmt\"\n    \"testing\"\n)\n\nfunc TestCreateUser(t *testing.T) {\n    // ...\n}\nO corpo da função de teste TestCreateUser será preenchido de acordo com abordagem escolhida."
+  },
+  {
+    "objectID": "posts/testes-unitarios-em-go/index.html#executando-um-teste-específico-1",
+    "href": "posts/testes-unitarios-em-go/index.html#executando-um-teste-específico-1",
+    "title": "Testes Unitários em Go",
+    "section": "Executando um teste específico",
+    "text": "Executando um teste específico\nVocê pode executar um teste específico usando a flag -run seguido do nome da função de teste. Exemplo:\ngo test -run=TestName\nCaso você deseje ver as mensagens apresentadas pelos testes, adicione a flag -v. Além da possibilidade de executar uma função de teste específica, podemos executar uma função de teste específica e um caso de teste específico. Veja um exemplo:\ngo test -run=\"TestName/nome do caso de teste\" -v"
   }
 ]

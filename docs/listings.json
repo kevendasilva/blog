@@ -2,6 +2,7 @@
   {
     "listing": "/index.html",
     "items": [
+      "/posts/testes-unitarios-em-go/index.html",
       "/posts/redis-e-docker/index.html"
     ]
   }

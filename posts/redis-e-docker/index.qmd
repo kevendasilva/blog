@@ -5,6 +5,7 @@ subtitle: "Detalhes da implementação de um servidor Redis com Docker."
 author: "Keven da Silva"
 description: "Criando um servidor Redis e um exemplo de uso com Go."
 date: "2023-03-05"
+toc: true
 categories: ["redis", "tutorial", "docker", "go"]
 ---
 
